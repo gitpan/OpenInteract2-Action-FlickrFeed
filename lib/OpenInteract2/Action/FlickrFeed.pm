@@ -3,7 +3,7 @@ package OpenInteract2::Action::FlickrFeed;
 use strict;
 use base qw( OpenInteract2::Action::RSS );
 
-$OpenInteract2::Action::FlickrFeed::VERSION = '0.01';
+$OpenInteract2::Action::FlickrFeed::VERSION = '0.02';
 
 my $URL_TEMPLATE   = 'http://www.flickr.com/services/feeds/photos_public.gne?id=%s&format=%s';
 my $DEFAULT_FORMAT = 'atom_03';
@@ -21,22 +21,24 @@ sub _get_feed_url {
 
 sub _modify_template_params {
     my ( $self, $params ) = @_;
+    my $num_photos = $self->param( 'num_photos' ) || 0;
     my $feed = $params->{feed};
     my @entries = ();
     foreach my $entry ( $feed->entries ) {
         my $content = $entry->content->body; # already escaped
         my $photo_data = $self->_parse_flickr_content( $content );
         push @entries, $photo_data;
+        last if ( $num_photos and scalar( @entries ) == $num_photos );
     }
     $params->{photos} = \@entries;
 }
 
 # We use simple regexes to extract the data from the content Flickr
-# emits; therefore his is very dependent on the format, which is:
+# emits; therefore this is very dependent on the format, which is:
 
 # <p><a href="http://www.flickr.com/people/FLICKRID/">USER NAME</a> posted a photo:</p>
 #
-# <p><a href="http://www.flickr.com/photos/FLICKRID/PHOTOID/" title="TITLE"><img src="http://photosSOMESERVER.flickr.com/PHOTOID_CHECKSUM.jpg" width="WIDTH" height="HEIGHT" alt="TITLE" style="border: 1px solid #000000;" /></a></p> 
+# <p><a href="http://www.flickr.com/photos/FLICKRID/PHOTOID/" title="TITLE"><img src="http://photosSOMESERVER.flickr.com/PHOTOID_CHECKSUM.jpg" width="WIDTH" height="HEIGHT" alt="TITLE" style="border: 1px solid #000000;" /></a></p>
 
 # Or with some data filled in:
 #
@@ -129,7 +131,7 @@ So you can do something like this in your template:
  Recent photos:<br /> 
  [% FOREACH photo = photos %]
    <a href="[% photo.link %]"
-      title="[% photo.title %]"><img src="[% photo.img_src %]" 
+      title="[% photo.title %]"><img src="[% photo.img_src %]"
                                      width="[% photo.width %]"
                                      height="[% photo.height %]" /></a> <br />
  [% END %]
@@ -163,6 +165,11 @@ philosophical objections to Atom you can use 'rss_200'.)
 B<cache_expire> (optional but strongly recommended)
 
 Same as L<OpenInteract2::Action::RSS>
+
+B<num_photos> (optional; default 0, which means display all)
+
+Number of photos to display; by default we show all of them. You can
+also control this from your template if you wish.
 
 =head1 SEE ALSO
 
